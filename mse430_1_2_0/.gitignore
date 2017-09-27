@@ -1,0 +1,16 @@
+
+# There will be a different .gitignore in some of the subdirectories,
+# corresponding to their respective IDEs
+
+# Emacs
+# -*- mode: gitignore; -*-
+\#*\#
+*~
+
+# macOS
+.DS_Store
+
+# Python
+/venv/
+/.venv/
+/cs470venv/

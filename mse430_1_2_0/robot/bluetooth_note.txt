@@ -1,0 +1,16 @@
+The bluetooth connection for these robots is provided by HC-05/HC-06 bluetooth modules, which provide all of the functionality needed to pair and connect, creates a virtual serial interface with the RFCOMM protocol. All of the communication is forwarded to the MSP430 processor over a 9600 baud UART connection, but the software on the robot is not aware that the connection is a bluetooth one in any way; it just sends and receives bytes.
+
+The HC-05/6 modules are designed to work out of the box, but I liked to configure them a little bit so they had proper names and better PINs (the default was 1234, but 0000 seems to be a more common choice--at least for Macs). This can't be done by the robot, so it needs to be done externally. At this point, I don't think I want to document that entire process step-by-step, but I'll try to gather links to the sites that describe it, and clarify a couple pitfalls that gave me trouble along the way.
+
+Links:
+https://mcuoneclipse.com/2013/06/19/using-the-hc-06-bluetooth-module/
+http://www.instructables.com/id/Modify-The-HC-05-Bluetooth-Module-Defaults-Using-A/
+http://www.electronicaestudio.com/docs/istd016A.pdf
+http://dronehitech.com/en/change-baud-rate-bluetooth-module/
+https://developer.mbed.org/users/edodm85/notebook/HC-05-bluetooth/
+http://wiki.pinguino.cc/index.php/SPP_Bluetooth_Modules
+
+Pitfalls:
+* The HC-05 and HC-06 are the same when connecting/using them, but they are very different to configure (sorry, I should have stuck with one).
+* Changing the baud rate on the HC-05 does NOT change the baud rate for the command mode (38400). On the HC-06 I think it does, but the default is 9600 so I wouldn't have noticed.
+* I did the programming with a BusPirate v2, but it wasn't quite fast enough to read the responses, so while I was able to program them, it took me an hour or two to realize that it actually worked.

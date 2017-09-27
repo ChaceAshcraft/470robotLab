@@ -1,0 +1,9 @@
+This project uses the Qmath library from TI. Setting up the project so
+it will compile requires downloading and installing the library, and
+if you install in the same place that I did (I think it's the
+default), then everything shouod just work. Otherwise, you may have to
+change the definition of IQMATHLIB_ROOT in the project properties so
+the compiler can find the library. The example applications that
+install with the library have the correct settings, so that can be
+helpful.
+

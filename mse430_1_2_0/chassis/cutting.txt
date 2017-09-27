@@ -1,0 +1,49 @@
+MSE430 acrylic chassis
+
+The frame is laser-cut from 3 mm (0.12 in) thick acrylic sheet.
+Specifically, I used sheets of dark semi-transparent cast acrylic from
+Chemcast GP, because there was a lot left over from a different
+project. The design might not work as well with other materials,
+because I tweaked the design and cutter settings to work for this
+specific material. It can be redone without too much work, though.
+
+This folder contains three versions of the design. chassis.pdf and
+chassis.cdr are the final version, but the AutoCAD drawing
+(chassis.dwg) doesn't have the engraving/hatch areas because I
+couldn't get them to export nicely, so I just added the final touches
+with CorelDraw 6.
+
+The frame consists of three layers and four side panels. The
+rectangular panels are for the battery cases, and the thin ones go on
+the sides to hold the wires away from the wheels. The tabs are
+slightly bowed outward for better insertion in the slots, but this is
+very sensitive to the kerf, unfortunately.
+
+The botton layer has cutouts for the wheels and holes for the bolts
+that secure the motors and ball casters, as well as the slots and
+holes for the bolts that connect it to the middle layer.
+
+The middle layer, in addition to the cutouts it shares with the bottom
+layer, has rounded slots for passing the wires from the motors and
+batteries up to the PCB. There are black engravings around the holes
+for the bolts that connect it to the bottom to countersink the bolt
+heads. The settings in CutterSettings.las are appropriate to make a
+deep engraving with the acrylic I used; other materials might need
+adjustment. Note that the pattern is stretched vertically; this is
+because the cutter insists on cutting against air flow, so vaporized
+material gets redeposited on the top end. The best solution I could
+come up with for this was to make it taller to allow the bolt head to
+fit anyway. Rotating these patterns sideways will break this.
+
+The top layer has four holes around the edges for the bolts that
+secure it and the PCB to the middle layer. These are also countersunk
+for a flat, level top. There are also three smaller holes for LEDs
+that are press-fit in the top for camera recognition. These holes, as
+well as two of the bolt holes, are surrounded by a light gray region
+that the cutter translates as a low-intensity engrave (compared to the
+solid black of the hex indents). The setting is just enough to burn
+through the paper protecting the material without making a deep
+cut. This gives the area around the LEDs and those two bolts a diffuse
+finish, as opposed to the almost mirror-like material, which allows
+them to be seen when an overhead light reflects into the camera. This
+same engraving setting is used for the number in the middle.
