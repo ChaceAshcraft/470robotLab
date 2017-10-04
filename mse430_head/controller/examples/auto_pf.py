@@ -65,10 +65,8 @@ def main(host='localhost', port=55555, goal="I0"):
     def distance(point1, point2):
         return np.sqrt((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2)
 
-    def PID(t, path, cur_location, KP, KD, KI):
-        k_P = KP
-        k_D = KD
-        k_I = KI
+    def PID_angle(hist, path, KP, KD, KI):
+        cur_state = hist[-1]
         
     
     # not sure these will be useful for our implementation
