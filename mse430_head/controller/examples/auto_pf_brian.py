@@ -138,7 +138,9 @@ def main(host='localhost', port=55555, goal="I0"):
     # Running loop
     try:
 
-        while True:
+        you_did_it = False
+
+        while not you_did_it:
             # Get the position of the robot. The result should be a
             # dictionary with four corners, a center, an orientation
             # vector, and a timestamp that isn't very useful yet.
@@ -174,23 +176,29 @@ def main(host='localhost', port=55555, goal="I0"):
 
                     # accrue effect of potential fields on the robot
                 cur_rob_loc = np.array(res['center'])
-                cur_rob_loc[1] *= -1 # adjust for y being down
-                field_effect = np.array([0, 0])
-                field_effect += goalField.effect(cur_rob_loc)
-                for field in fields.items():
-                    field_effect += field.effect(cur_rob_loc)
 
-                cur_trans_err = distance(cur_rob_loc, cur_rob_loc + field_effect)
-                cur_angle_err = cur_robot_angle - calc_angle(field_effect)
-                trans_err_list = trans_err_list[:-1]
-                angle_err_list = angle_err_list[:-1]
-                np.append(trans_err_list, cur_trans_err)
-                np.append(angle_err_list, cur_angle_err)
+                if distance(cur_rob_loc, goalField.location) < marker_radius:
+                    you_did_it = True
+                else:
 
-                drive = PID(trans_err_list, k_trans[0], k_trans[1], k_trans[2])
-                turn = PID(angle_err_list, k_angle[0], k_angle[1], k_angle[2])
+                    cur_rob_loc[1] *= -1 # adjust for y being down
+                    field_effect = np.array([0, 0])
+                    field_effect += goalField.effect(cur_rob_loc)
+                    for field in fields.items():
+                        field_effect += field.effect(cur_rob_loc)
 
-                do('speed {} {}'.format(round(drive - turn), round(drive + turn)))
+                    cur_trans_err = distance(cur_rob_loc, cur_rob_loc + field_effect)
+                    cur_angle_err = cur_robot_angle - calc_angle(field_effect)
+                    trans_err_list = trans_err_list[:-1]
+                    angle_err_list = angle_err_list[:-1]
+                    np.append(trans_err_list, cur_trans_err)
+                    np.append(angle_err_list, cur_angle_err)
+
+                    drive = PID(trans_err_list, k_trans[0], k_trans[1], k_trans[2])
+                    turn = PID(angle_err_list, k_angle[0], k_angle[1], k_angle[2])
+
+                    do('speed {} {}'.format(round(drive - turn), round(drive + turn)))
+                    # sleep(0.05)
 
             else:
                 # Sometimes the camera fails to find the robot, and it
