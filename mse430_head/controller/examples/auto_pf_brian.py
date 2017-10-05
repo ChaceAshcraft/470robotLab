@@ -187,8 +187,10 @@ def main(host='localhost', port=55555, goal="I0"):
                 np.append(trans_err_list, cur_trans_err)
                 np.append(angle_err_list, cur_angle_err)
 
-                trans_val = PID(trans_err_list, k_trans[0], k_trans[1], k_trans[2])
-                angle_val = PID(angle_err_list, k_angle[0], k_angle[1], k_angle[2])
+                drive = PID(trans_err_list, k_trans[0], k_trans[1], k_trans[2])
+                turn = PID(angle_err_list, k_angle[0], k_angle[1], k_angle[2])
+
+                do('speed {} {}'.format(round(drive - turn), round(drive + turn)))
 
             else:
                 # Sometimes the camera fails to find the robot, and it
