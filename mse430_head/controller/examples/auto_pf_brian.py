@@ -65,12 +65,30 @@ def main(host='localhost', port=55555, goal="I0"):
     def distance(point1, point2):
         return np.sqrt((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2)
 
-    def PID(t, path, cur_location, KP, KD, KI):
-        k_P = KP
-        k_D = KD
-        k_I = KI
-        
-    
+    # PID is given a list of errors where the last error is the current error, as well as three proportionality constants
+    # PID returns a number
+    def PID(errors, KP, KD, KI):
+        term1 = KP * errors[-1]
+        term2 = 0
+        term3 = 0
+        if len(errors) > 1:
+            term2 = KD * derivative(errors[-2:-1])
+            term3 = KI * np.trapz(errors)
+        return term1 + term2 + term3
+
+    def derivative(x):
+        d = x[1] - x[0]
+        return d
+
+    def integrate(x):
+        i = 0
+        # Loop through x, adding vals to i, then divide i by the length of the array x minus 1
+        for j in range(len(x)):
+            i += x[j]
+        i /= len(x)
+        i *= len(x) - 1
+        return i
+
     # not sure these will be useful for our implementation
     angle_target = calc_angle(0, -1)
     position_target = 1080 / 2
@@ -92,6 +110,11 @@ def main(host='localhost', port=55555, goal="I0"):
     attractor_strength = 0.35
     repulsor_strength = 0.35
     tangent_strength = 0.35
+    trans_err_list = np.zeros(5)
+    angle_err_list = np.zeros(5)
+
+    k_trans = [0.5, 0.5, 0.5]
+    k_angle = [0.5, 0.5, 0.5]
 
     markers = do('where others')
     marker_radius =  distance(markers[markers.keys()[0]]['corners'][0], 
@@ -114,6 +137,7 @@ def main(host='localhost', port=55555, goal="I0"):
 
     # Running loop
     try:
+
         while True:
             # Get the position of the robot. The result should be a
             # dictionary with four corners, a center, an orientation
@@ -124,10 +148,9 @@ def main(host='localhost', port=55555, goal="I0"):
             if 'orientation' in res:
                 lost_count = 0
                 cur_robot_angle = calc_angle(*res['orientation'])
-
-'''
-#Not sure we need this for our implementation
-
+                '''
+                #Not sure we need this for our implementation
+                
                 # Calculate an error in the angle, which gives a
                 # direction (sign) to turn and also an idea of what
                 # speed to go (the magnitude). Note that this is the
@@ -147,17 +170,25 @@ def main(host='localhost', port=55555, goal="I0"):
                 turn = 5 * angle_error
                 drive = 0.05 * cos(angle_error) * position_error
                 do('speed {} {}'.format(round(drive-turn), round(drive+turn)))
-'''
+                '''
 
-                # accrue effect of potential fields on the robot                
-                cur_rob_loc = res['center']
-                cur_rob_loc[1] *= -1 # adjust for y being down 
+                    # accrue effect of potential fields on the robot
+                cur_rob_loc = np.array(res['center'])
+                cur_rob_loc[1] *= -1 # adjust for y being down
                 field_effect = np.array([0, 0])
                 field_effect += goalField.effect(cur_rob_loc)
                 for field in fields.items():
                     field_effect += field.effect(cur_rob_loc)
 
-             
+                cur_trans_err = distance(cur_rob_loc, cur_rob_loc + field_effect)
+                cur_angle_err = cur_robot_angle - calc_angle(field_effect)
+                trans_err_list = trans_err_list[:-1]
+                angle_err_list = angle_err_list[:-1]
+                np.append(trans_err_list, cur_trans_err)
+                np.append(angle_err_list, cur_angle_err)
+
+                trans_val = PID(trans_err_list, k_trans[0], k_trans[1], k_trans[2])
+                angle_val = PID(angle_err_list, k_angle[0], k_angle[1], k_angle[2])
 
             else:
                 # Sometimes the camera fails to find the robot, and it
