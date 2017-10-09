@@ -93,6 +93,13 @@ def main(host='localhost', port=55555, goal="I0"):
         i *= len(x) - 1
         return i
 
+    def our_round(x):
+        if x >= 1:
+            return round(x)
+        if x >=.2:
+            return 1
+        return 0
+
     # not sure these will be useful for our implementation
     angle_target = calc_angle(0, -1)
     position_target = 1080 / 2
@@ -113,12 +120,15 @@ def main(host='localhost', port=55555, goal="I0"):
     max_rob_speed = 20 #adjust as needed
     attractor_strength = 0.75
     repulsor_strength = 0.35
-    tangent_strength = 0.35
+    tangent_strength = 0.75
     trans_err_list = np.array([0,0,0,0,0])
     angle_err_list = np.array([0,0,0,0,0])
 
-    k_trans = [0.01, 0.00, 0.00]
-    k_angle = [0.5, 0.1, 0.01]
+    trans_fields = {'74':'counter', '42':'counter', '72':'counter', '32':'counter',
+                     '20':'clock', '97':'clock', '99':'clock'} 
+
+    k_trans = [0.005, 0.002, 0.001]
+    k_angle = [0.4, 0.1, 0.01]
 
     markers = do('where others')
     marker_radius =  distance(markers[goal]['corners'][0],
@@ -130,14 +140,15 @@ def main(host='localhost', port=55555, goal="I0"):
                 location[1] *= -1  # adjust for y being down
                 goalField = PotentialField(location, marker_radius/2, 20000, attractor_strength,
                                                                         field_type='attractor')
+            elif key in trans_fields.keys():
+                location = markers[key]['center']
+                location[1] *= -1  # adjust for y being down
+                fields[key] = PotentialField(location, marker_radius*.75, 3*marker_radius, repulsor_strength,
+                                                       field_type='tangent', orient=trans_fields[key])
             else:
                 location = markers[key]['center']
                 location[1] *= -1  # adjust for y being down
-            #    if np.random.randint(10) < 1: # 1/10 probability of tangent field
-            #         fields[key] = PotentialField(location, marker_radius, 10*marker_radius, repulsor_strength,
-            #                                                            field_type='tangent')
-            #    else:
-            fields[key] = PotentialField(location, marker_radius, 10*marker_radius, tangent_strength,
+                fields[key] = PotentialField(location, 1.5*marker_radius, 2*marker_radius, tangent_strength,
                                                                         field_type='repulsor')
 
     # Running loop
@@ -185,7 +196,7 @@ def main(host='localhost', port=55555, goal="I0"):
 
                 print("distance", distance(cur_rob_loc, goalField.location))
                 print("robot loc, ", cur_rob_loc)
-                print("goal loc, ", markers['16']['center']) 
+                print("goal loc, ", markers[goal]['center']) 
                 print("goalfield_loc, ", goalField.location)
                 if distance(cur_rob_loc, goalField.location) < 3*marker_radius:
                     you_did_it = True
@@ -216,7 +227,7 @@ def main(host='localhost', port=55555, goal="I0"):
                     print('Instructions: {}, {}'.format(drive - turn, drive + turn))
                     print("goalField radius: ", goalField.radius)
 
-                    do('speed {} {}'.format(int(round(drive - 7*turn)), int(round(drive + 7*turn))))
+                    do('speed {} {}'.format(int(our_round(drive - 7*turn)), int(our_round(drive + 7*turn))))
                     sleep(0.01)
 
             else:
