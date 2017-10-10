@@ -4,6 +4,7 @@ from math import atan2, cos, pi
 from time import sleep
 import numpy as np
 from potentialField import PotentialField
+from matplotlib import pyplot as plt
 
 def main(host='localhost', port=55555, goal="I0"):
     """
@@ -54,7 +55,7 @@ def main(host='localhost', port=55555, goal="I0"):
         return atan2(-y, x)  # Reversed for upside-down y
 
     def calc_angle2(x, y):
-        return atan2(y, x)  
+        return atan2(y, x)
 
     # Sometimes, when taking differences between angles, you end up
     # with something out of usable range. This fixes that by
@@ -78,6 +79,7 @@ def main(host='localhost', port=55555, goal="I0"):
         if len(errors) > 1:
             term2 = KD * derivative(errors[-2:])
             term3 = KI * np.trapz(errors)
+        print("Proportional term: ", term1, " Derivative term: ", term2, " Integral term: ", term3)
         return term1 + term2 + term3
 
     def derivative(x):
@@ -106,7 +108,6 @@ def main(host='localhost', port=55555, goal="I0"):
 
 
 
-
     lost_count = 0
 
     '''
@@ -118,17 +119,20 @@ def main(host='localhost', port=55555, goal="I0"):
     fields = {}
     goalField = None
     max_rob_speed = 20 #adjust as needed
-    attractor_strength = 0.75
+    attractor_strength = 0.55
     repulsor_strength = 0.35
-    tangent_strength = 0.75
+    tangent_strength = 100
+    const_repulsor_strength = 12
+    const_attractor_strength = 10
+    const_tang_strength = 4
     trans_err_list = np.array([0,0,0,0,0])
     angle_err_list = np.array([0,0,0,0,0])
 
-    trans_fields = {'74':'counter', '42':'counter', '72':'counter', '32':'counter',
-                     '20':'clock', '97':'clock', '99':'clock'} 
+    tangs_fields = {'74':'counter', '42':'counter', '72':'counter', '32':'counter',
+                     '20':'clock', '97':'clock', '99':'clock'}
 
-    k_trans = [0.005, 0.002, 0.001]
-    k_angle = [0.4, 0.1, 0.01]
+    k_trans = [0.01, 0.01, 0.01]
+    k_angle = [0.2, 0.3, 0.01]
 
     markers = do('where others')
     marker_radius =  distance(markers[goal]['corners'][0],
@@ -139,22 +143,28 @@ def main(host='localhost', port=55555, goal="I0"):
                 location = markers[key]['center']
                 location[1] *= -1  # adjust for y being down
                 goalField = PotentialField(location, marker_radius/2, 20000, attractor_strength,
-                                                                        field_type='attractor')
-            elif key in trans_fields.keys():
+                                                                        field_type='attractor', const_strength = const_attractor_strength)
+            elif key in tangs_fields.keys():
                 location = markers[key]['center']
                 location[1] *= -1  # adjust for y being down
-                fields[key] = PotentialField(location, marker_radius*.75, 3*marker_radius, repulsor_strength,
-                                                       field_type='tangent', orient=trans_fields[key])
+                fields[key] = PotentialField(location, marker_radius*0.25, 5*marker_radius, tangent_strength,
+                                                       field_type='tangent', orient=tangs_fields[key], const_strength = const_tang_strength)
+#                fields[key] = PotentialField(location, marker_radius*0.25, 5*marker_radius, attractor_strength,
+#                                                                        field_type='repulsor')
             else:
                 location = markers[key]['center']
                 location[1] *= -1  # adjust for y being down
-                fields[key] = PotentialField(location, 1.5*marker_radius, 2*marker_radius, tangent_strength,
-                                                                        field_type='repulsor')
+                fields[key] = PotentialField(location, 1.*marker_radius, 4*marker_radius, repulsor_strength,
+                                                                        field_type='repulsor', const_strength = const_repulsor_strength)
 
     # Running loop
     try:
 
         you_did_it = False
+        left_wheel_list = []
+        right_wheel_list = []
+        x_vec_list = []
+        y_vec_list = []
 
         while not you_did_it:
             # Get the position of the robot. The result should be a
@@ -196,9 +206,9 @@ def main(host='localhost', port=55555, goal="I0"):
 
                 print("distance", distance(cur_rob_loc, goalField.location))
                 print("robot loc, ", cur_rob_loc)
-                print("goal loc, ", markers[goal]['center']) 
+                print("goal loc, ", markers[goal]['center'])
                 print("goalfield_loc, ", goalField.location)
-                if distance(cur_rob_loc, goalField.location) < 3*marker_radius:
+                if distance(cur_rob_loc, goalField.location) < 2.75*marker_radius:
                     you_did_it = True
                     do('speed 0 0')
                 else:
@@ -224,11 +234,20 @@ def main(host='localhost', port=55555, goal="I0"):
                     print('Current angle: {}, Angle error: {}' .format(cur_robot_angle, cur_angle_err))
                     print('Current Trans: {}, Field Effect: {}, Trans error: {}' .format(cur_rob_loc, field_effect, cur_trans_err))
                     print('PID drive: {}, PID turn: {}'.format(drive, turn))
-                    print('Instructions: {}, {}'.format(drive - turn, drive + turn))
+                    print('Instructions: {}, {}'.format(int(our_round(drive - 7*turn)), int(our_round(drive + 7*turn))))
                     print("goalField radius: ", goalField.radius)
+                    left_wheel = int(our_round(drive - 7*turn))
+                    right_wheel = int(our_round(drive + 7*turn))
+                    if drive > max_rob_speed:
+                        left_wheel =  int(our_round(max_rob_speed - 7 * turn))
+                        right_wheel = int(our_round(max_rob_speed + 7 * turn))
 
-                    do('speed {} {}'.format(int(our_round(drive - 7*turn)), int(our_round(drive + 7*turn))))
-                    sleep(0.01)
+                    do('speed {} {}'.format(left_wheel, right_wheel))
+                    left_wheel_list.append(left_wheel)
+                    right_wheel_list.append(right_wheel)
+                    x_vec_list.append(field_effect[0])
+                    y_vec_list.append(field_effect[1])
+                    sleep(0.05)
 
             else:
                 # Sometimes the camera fails to find the robot, and it
@@ -244,6 +263,18 @@ def main(host='localhost', port=55555, goal="I0"):
     # Stop with ^C
     except KeyboardInterrupt:
         print('\nStopping')
+        t = np.linspace(len(left_wheel_list))
+        plt.plot(t, np.array(left_wheel_list), label='left_wheel')
+        plt.plot(t, np.array(right_wheel_list), label='right_wheel')
+        plt.legend()
+        plt.show()
+        plt.savefig("wheels.jpg")
+        plt.figure()
+        plt.plot(t, np.array(x_vec_list), label='x_mag')
+        plt.plot(t, np.array(y_vec_list), label='y_mag')
+        plt.legend()
+        plt.show()
+        plt.savefig("vecs.jpg")
 
     # Close the connection (wait for the last command to return)
     sleep(0.5)
