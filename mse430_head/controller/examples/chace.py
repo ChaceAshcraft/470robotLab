@@ -166,6 +166,11 @@ def main(host='localhost', port=55555, goal="I0"):
         x_vec_list = []
         y_vec_list = []
 
+        turn_coefficient = 5
+
+        vx = 0;
+        vy = 0;
+
         while not you_did_it:
             # Get the position of the robot. The result should be a
             # dictionary with four corners, a center, an orientation
@@ -228,25 +233,35 @@ def main(host='localhost', port=55555, goal="I0"):
                     trans_err_list = np.append(trans_err_list, cur_trans_err)
                     angle_err_list = np.append(angle_err_list, cur_angle_err)
 
-                    drive = PID(trans_err_list, k_trans[0], k_trans[1], k_trans[2])
-                    turn = PID(angle_err_list, k_angle[0], k_angle[1], k_angle[2])
+                    # drive = PID(trans_err_list, k_trans[0], k_trans[1], k_trans[2])
+                    # turn = PID(angle_err_list, k_angle[0], k_angle[1], k_angle[2])
 
-                    print('Current angle: {}, Angle error: {}' .format(cur_robot_angle, cur_angle_err))
-                    print('Current Trans: {}, Field Effect: {}, Trans error: {}' .format(cur_rob_loc, field_effect, cur_trans_err))
-                    print('PID drive: {}, PID turn: {}'.format(drive, turn))
-                    print('Instructions: {}, {}'.format(int(our_round(drive - 7*turn)), int(our_round(drive + 7*turn))))
-                    print("goalField radius: ", goalField.radius)
-                    left_wheel = int(our_round(drive - 7*turn))
-                    right_wheel = int(our_round(drive + 7*turn))
+                    ax = field_effect[0]
+                    ay = field_effect[1]
+
+                    vx += ax
+                    vy += ay
+
+                    drive = np.sqrt(vx**2 + vy**2)
+                    angle_diff = atan2(vy,vx) - cur_robot_angle
+                    turn = np.sign(angle_diff) * turn_coefficient * np.sqrt(np.abs(angle_diff))
+
+                    # print('Current angle: {}, Angle error: {}' .format(cur_robot_angle, cur_angle_err))
+                    # print('Current Trans: {}, Field Effect: {}, Trans error: {}' .format(cur_rob_loc, field_effect, cur_trans_err))
+                    # print('PID drive: {}, PID turn: {}'.format(drive, turn))
+                    # print('Instructions: {}, {}'.format(int(our_round(drive - turn_coefficient*turn)), int(our_round(drive + turn_coefficient*turn))))
+                    # print("goalField radius: ", goalField.radius)
+                    left_wheel = int(our_round(drive - turn_coefficient*turn))
+                    right_wheel = int(our_round(drive + turn_coefficient*turn))
                     if drive > max_rob_speed:
-                        left_wheel =  int(our_round(max_rob_speed - 7 * turn))
-                        right_wheel = int(our_round(max_rob_speed + 7 * turn))
+                        left_wheel =  int(our_round(max_rob_speed - 10 * turn))
+                        right_wheel = int(our_round(max_rob_speed + 10 * turn))
 
                     do('speed {} {}'.format(left_wheel, right_wheel))
-                    left_wheel_list.append(left_wheel)
-                    right_wheel_list.append(right_wheel)
-                    x_vec_list.append(field_effect[0])
-                    y_vec_list.append(field_effect[1])
+                    # left_wheel_list.append(left_wheel)
+                    # right_wheel_list.append(right_wheel)
+                    # x_vec_list.append(field_effect[0])
+                    # y_vec_list.append(field_effect[1])
                     sleep(0.05)
 
             else:
@@ -263,18 +278,18 @@ def main(host='localhost', port=55555, goal="I0"):
     # Stop with ^C
     except KeyboardInterrupt:
         print('\nStopping')
-        t = np.linspace(len(left_wheel_list))
-        plt.plot(t, np.array(left_wheel_list), label='left_wheel')
-        plt.plot(t, np.array(right_wheel_list), label='right_wheel')
-        plt.legend()
-        plt.show()
-        plt.savefig("wheels.jpg")
-        plt.figure()
-        plt.plot(t, np.array(x_vec_list), label='x_mag')
-        plt.plot(t, np.array(y_vec_list), label='y_mag')
-        plt.legend()
-        plt.show()
-        plt.savefig("vecs.jpg")
+        # t = np.linspace(len(left_wheel_list))
+        # plt.plot(t, np.array(left_wheel_list), label='left_wheel')
+        # plt.plot(t, np.array(right_wheel_list), label='right_wheel')
+        # plt.legend()
+        # plt.show()
+        # plt.savefig("wheels.jpg")
+        # plt.figure()
+        # plt.plot(t, np.array(x_vec_list), label='x_mag')
+        # plt.plot(t, np.array(y_vec_list), label='y_mag')
+        # plt.legend()
+        # plt.show()
+        # plt.savefig("vecs.jpg")
 
     # Close the connection (wait for the last command to return)
     sleep(0.5)
