@@ -61,7 +61,7 @@ class PotentialField:
                 return [self.field_strength*(d + 2)*math.cos(theta),
                         self.field_strength * (d + 2) * math.sin(theta)]
     def o_effect(self, location):
-        if self.type == 'repulsor':
+        if self.field_type == 'repulsor':
             d = self.distance(location, self.location)
             if d > self.radius + self.spread:
                 return [0, 0]
@@ -72,7 +72,7 @@ class PotentialField:
                         -self.field_strength * (self.spread + self.radius - d) * math.sin(theta)]
             else:
                 return [-np.sign(math.cos(theta))*self.infinity, -np.sign(math.sin(theta))*self.infinity]
-        elif self.type == 'tangent':
+        elif self.field_type == 'tangent':
             d = self.distance(location, self.location)
             if self.orient == 'counter':
                 theta = math.atan2(self.location[1] - location[1], self.location[0] - location[0]) + np.pi/4
@@ -96,6 +96,6 @@ class PotentialField:
                         self.field_strength * self.spread * math.sin(theta)]
             if d >= self.radius: 
                 return [self.field_strength * (d - self.radius) * math.cos(theta),
-                        self.const_strength * (d - self.radius) * math.sin(theta)]
+                        self.field_strength * (d - self.radius) * math.sin(theta)]
             else: # 'On top' of the object
                 return [0, 0]

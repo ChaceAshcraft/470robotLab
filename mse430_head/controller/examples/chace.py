@@ -118,10 +118,10 @@ def main(host='localhost', port=55555, goal="I0"):
     '''
     fields = {}
     goalField = None
-    max_rob_speed = 20 #adjust as needed
-    attractor_strength = 0.55
-    repulsor_strength = 0.35
-    tangent_strength = 100
+    max_rob_speed = 2.3 #adjust as needed
+    attractor_strength = 0.33
+    repulsor_strength = 0.3
+    tangent_strength = 0.78
     const_repulsor_strength = 12
     const_attractor_strength = 10
     const_tang_strength = 4
@@ -147,14 +147,14 @@ def main(host='localhost', port=55555, goal="I0"):
             elif key in tangs_fields.keys():
                 location = markers[key]['center']
                 location[1] *= -1  # adjust for y being down
-                fields[key] = PotentialField(location, 1.25*marker_radius, 3.5*marker_radius, tangent_strength,
+                fields[key] = PotentialField(location, 1.25*marker_radius, 5*marker_radius, tangent_strength,
                                                        field_type='tangent', orient=tangs_fields[key], const_strength = const_tang_strength)
 #                fields[key] = PotentialField(location, marker_radius*0.25, 5*marker_radius, attractor_strength,
 #                                                                        field_type='repulsor')
             else:
                 location = markers[key]['center']
                 location[1] *= -1  # adjust for y being down
-                fields[key] = PotentialField(location, 1.25*marker_radius, 4.5*marker_radius, repulsor_strength,
+                fields[key] = PotentialField(location, 1.25*marker_radius, 6*marker_radius, repulsor_strength,
                                                                         field_type='repulsor', const_strength = const_repulsor_strength)
 
     # Running loop
@@ -166,7 +166,7 @@ def main(host='localhost', port=55555, goal="I0"):
         x_vec_list = []
         y_vec_list = []
 
-        turn_coefficient = 5
+        turn_coefficient = 4
 
         vx = 0;
         vy = 0;
@@ -219,10 +219,10 @@ def main(host='localhost', port=55555, goal="I0"):
                 else:
 
                     field_effect = np.array([0., 0.])
-                    field_effect += np.array(goalField.effect(cur_rob_loc))
+                    field_effect += np.array(goalField.o_effect(cur_rob_loc))
                     for field in fields.values():
-                        print("obstacle effect: ", field.effect(cur_rob_loc))
-                        field_effect += np.array(field.effect(cur_rob_loc))
+                        print("obstacle effect: ", field.o_effect(cur_rob_loc))
+                        field_effect += np.array(field.o_effect(cur_rob_loc))
 
                     print("field_effect: ", field_effect)
 
@@ -233,18 +233,20 @@ def main(host='localhost', port=55555, goal="I0"):
                     trans_err_list = np.append(trans_err_list, cur_trans_err)
                     angle_err_list = np.append(angle_err_list, cur_angle_err)
 
-                    # drive = PID(trans_err_list, k_trans[0], k_trans[1], k_trans[2])
-                    # turn = PID(angle_err_list, k_angle[0], k_angle[1], k_angle[2])
+                    drive = PID(trans_err_list, k_trans[0], k_trans[1], k_trans[2])
+                    turn = PID(angle_err_list, k_angle[0], k_angle[1], k_angle[2])
 
+                    '''
                     ax = field_effect[0]
                     ay = field_effect[1]
 
-                    vx += ax
-                    vy += ay
+                    vx = ax
+                    vy = ay
 
                     drive = np.sqrt(vx**2 + vy**2)
                     angle_diff = atan2(vy,vx) - cur_robot_angle
                     turn = np.sign(angle_diff) * turn_coefficient * np.sqrt(np.abs(angle_diff))
+                    '''
 
                     # print('Current angle: {}, Angle error: {}' .format(cur_robot_angle, cur_angle_err))
                     # print('Current Trans: {}, Field Effect: {}, Trans error: {}' .format(cur_rob_loc, field_effect, cur_trans_err))
@@ -254,8 +256,8 @@ def main(host='localhost', port=55555, goal="I0"):
                     left_wheel = int(our_round(drive - turn_coefficient*turn))
                     right_wheel = int(our_round(drive + turn_coefficient*turn))
                     if drive > max_rob_speed:
-                        left_wheel =  int(our_round(max_rob_speed - 10 * turn))
-                        right_wheel = int(our_round(max_rob_speed + 10 * turn))
+                        left_wheel =  int(our_round(max_rob_speed - turn_coefficient * turn))
+                        right_wheel = int(our_round(max_rob_speed + turn_coefficient * turn))
 
                     do('speed {} {}'.format(left_wheel, right_wheel))
                     # left_wheel_list.append(left_wheel)
