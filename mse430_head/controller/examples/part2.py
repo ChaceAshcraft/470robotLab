@@ -1,10 +1,12 @@
 import asyncio
+import sys
 import json
-from math import atan2, cos, pi
+from math import atan2, sin, cos, pi
 from time import sleep
 import numpy as np
 from potentialField import PotentialField
 from matplotlib import pyplot as plt
+import select
 
 def main(host='localhost', port=55555, goal="I0"):
     """
@@ -102,10 +104,43 @@ def main(host='localhost', port=55555, goal="I0"):
             return 1
         return 0
 
+
+    def repulsor_effect(robot_location, marker_location, radius, spread, field_strength, infinity):
+        d = distance(robot_location, marker_location)
+        if d > radius + spread:
+            return [0, 0]
+        theta = atan2(marker_location[1] - robot_location[1], marker_location[0] - robot_location[0])
+        #  a constant to give them some angle
+        if d >= self.radius:
+            return [-field_strength*(spread + radius - d)*cos(theta),
+                         -field_strength * (spread + radius - d) * sin(theta)]
+        else:
+            return [-np.sign(cos(theta))*infinity, -np.sign(sin(theta))*infinity]
+ 
+
+    def sonar(robot_location, direction, granularity, dist, obst_radius):
+        n = int(dist/granularity)
+        for i in range(n):
+            check_point = [robot_location[0] + granularity*cos(direction), robot_location[1] + granularity*sin(direction)] 
+            for obstacle in obstacles.values():
+                d = distance(check_point, obstacle)
+                if d  <= obst_radius:
+                    return check_point 
+        return None
+                    
+    
+    def check_sonars(robot_location, granularity, distance, obst_radius, spread, field_strength, infinity):
+        field_effect = np.array([0, 0])
+        for i in range(16):
+            angle = i*np.pi/8
+            res = sonar(robot_location, angle, granularity, distance, obst_radius)
+            if res is not None:
+                field_effect += repulsor_effect(robot_location, res, obst_radius, spread, field_strength, infinity) 
+        return field_effect
+
     # not sure these will be useful for our implementation
     angle_target = calc_angle(0, -1)
     position_target = 1080 / 2
-
 
 
     lost_count = 0
@@ -117,14 +152,11 @@ def main(host='localhost', port=55555, goal="I0"):
     computations on the set fields and the current robot postion.
     '''
     fields = {}
-    goalField = None
+    obstacles = {} 
     max_rob_speed = 2.3 #adjust as needed
-    attractor_strength = 0.33
+    attractor_strength = 3.53
     repulsor_strength = 0.32
     tangent_strength = 0.78
-    const_repulsor_strength = 12
-    const_attractor_strength = 10
-    const_tang_strength = 4
     trans_err_list = np.array([0,0,0,0,0])
     angle_err_list = np.array([0,0,0,0,0])
 
@@ -137,36 +169,29 @@ def main(host='localhost', port=55555, goal="I0"):
     markers = do('where others')
     marker_radius =  distance(markers[goal]['corners'][0],
                                         markers[goal]['center'])
+
+    goal_location = markers[goal]['center']
+
     for key in markers.keys():
         if key != 'time':
             if key == goal:
-                location = markers[key]['center']
-                location[1] *= -1  # adjust for y being down
-                goalField = PotentialField(location, marker_radius/2, 5*marker_radius, attractor_strength,
-                                    field_type='attractor', const_strength = const_attractor_strength)
-            elif key in tangs_fields.keys():
-                location = markers[key]['center']
-                location[1] *= -1  # adjust for y being down
-                fields[key] = PotentialField(location, 1.25*marker_radius, 5*marker_radius, tangent_strength,
-                                                       field_type='tangent', orient=tangs_fields[key], const_strength = const_tang_strength)
-#                fields[key] = PotentialField(location, marker_radius*0.25, 5*marker_radius, attractor_strength,
-#                                                                        field_type='repulsor')
+                location = markers[goal]['center']
+                location[1] *= -1
+                obstacles[goal] = location
             else:
                 location = markers[key]['center']
-                location[1] *= -1  # adjust for y being down
-                fields[key] = PotentialField(location, 1.25*marker_radius, 5.3*marker_radius, repulsor_strength,
-                                                                        field_type='repulsor', const_strength = const_repulsor_strength)
-
+                location[1] *= -1
+                obstacles[key] = location
+                
+                
     # Running loop
     try:
 
         you_did_it = False
-        left_wheel_list = []
-        right_wheel_list = []
-        x_vec_list = []
-        y_vec_list = []
-
         turn_coefficient = 4
+        cur_direction = None
+        attractor = PotentialField([0,0], 1, 2, 0, field_type='attractor')
+
 
         vx = 0;
         vy = 0;
@@ -205,26 +230,54 @@ def main(host='localhost', port=55555, goal="I0"):
                 do('speed {} {}'.format(round(drive-turn), round(drive+turn)))
                 '''
 
-                    # accrue effect of potential fields on the robot
+                # accrue effect of potential fields on the robot
                 cur_rob_loc = np.array(res['center'])
                 cur_rob_loc[1] *= -1 # adjust for y being down
 
-                print("distance", distance(cur_rob_loc, goalField.location))
                 print("robot loc, ", cur_rob_loc)
-                print("goal loc, ", markers[goal]['center'])
-                print("goalfield_loc, ", goalField.location)
-                if distance(cur_rob_loc, goalField.location) < 2.75*marker_radius:
+                if distance(cur_rob_loc, goal_location) < 2.75*marker_radius:
                     you_did_it = True
                     do('speed 0 0')
                 else:
 
-                    field_effect = np.array([0., 0.])
-                    field_effect += np.array(goalField.o_effect(cur_rob_loc))
-                    for field in fields.values():
-                        print("obstacle effect: ", field.o_effect(cur_rob_loc))
-                        field_effect += np.array(field.o_effect(cur_rob_loc))
+                    if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+                        new_direction = sys.stdin.read(1)
+                        print('new_direction', new_direction)
+                        sleep(0.05)
+                        if new_direction == cur_direction:
+                            attractor.field_strength = 0
+                        else:
+                            if new_direction == 'w':
+                                print("Turn up")
+                                cur_direction = new_direction
+                                att_loc = [cur_rob_loc[0], 10000]
+                                attractor = PotentialField(att_loc, 1, 10, attractor_strength, field_type='attractor')
+                            elif new_direction == 's':
+                                cur_direction = new_direction
+                                print("Turn down")
+                                att_loc = [cur_rob_loc[0], -10000]
+                                attractor = PotentialField(att_loc, 1, 10, attractor_strength, field_type='attractor')
+                            elif new_direction == 'd':
+                                cur_direction = new_direction
+                                print("Turn right")
+                                att_loc = [10000, cur_rob_loc[1]]
+                                attractor = PotentialField(att_loc, 1, 10, attractor_strength, field_type='attractor')
+                            elif new_direction == 'a':
+                                cur_direction = new_direction
+                                print("Turn left")
+                                att_loc = [-10000, cur_rob_loc[1]]
+                                attractor = PotentialField(att_loc, 1, 10, attractor_strength, field_type='attractor')
 
-                    print("field_effect: ", field_effect)
+
+                    field_effect = np.array([0., 0.])
+                    att_effect = attractor.o_effect(cur_rob_loc)
+                    obst_effect = check_sonars(cur_rob_loc, marker_radius/2.0, marker_radius*16.0, marker_radius, marker_radius*5,repulsor_strength, 10)
+                    # check_sonars(robot_location, granularity, distance, obst_radius, spread, field_strength, infinity):
+
+                    print("attract effect: ", att_effect)
+                    print("obstacle effect: ", obst_effect)
+                    
+                    field_effect += att_effect + obst_effect
 
                     cur_trans_err = distance(cur_rob_loc, cur_rob_loc + field_effect)
                     cur_angle_err =  calc_angle2(*field_effect) - cur_robot_angle
@@ -235,6 +288,9 @@ def main(host='localhost', port=55555, goal="I0"):
 
                     drive = PID(trans_err_list, k_trans[0], k_trans[1], k_trans[2])
                     turn = PID(angle_err_list, k_angle[0], k_angle[1], k_angle[2])
+
+                    if turn > max_rob_speed:
+                        turn = max_rob_speed
 
                     '''
                     ax = field_effect[0]
@@ -248,11 +304,6 @@ def main(host='localhost', port=55555, goal="I0"):
                     turn = np.sign(angle_diff) * turn_coefficient * np.sqrt(np.abs(angle_diff))
                     '''
 
-                    # print('Current angle: {}, Angle error: {}' .format(cur_robot_angle, cur_angle_err))
-                    # print('Current Trans: {}, Field Effect: {}, Trans error: {}' .format(cur_rob_loc, field_effect, cur_trans_err))
-                    # print('PID drive: {}, PID turn: {}'.format(drive, turn))
-                    # print('Instructions: {}, {}'.format(int(our_round(drive - turn_coefficient*turn)), int(our_round(drive + turn_coefficient*turn))))
-                    # print("goalField radius: ", goalField.radius)
                     left_wheel = int(our_round(drive - turn_coefficient*turn))
                     right_wheel = int(our_round(drive + turn_coefficient*turn))
                     if drive > max_rob_speed:
@@ -260,11 +311,7 @@ def main(host='localhost', port=55555, goal="I0"):
                         right_wheel = int(our_round(max_rob_speed + turn_coefficient * turn))
 
                     do('speed {} {}'.format(left_wheel, right_wheel))
-                    # left_wheel_list.append(left_wheel)
-                    # right_wheel_list.append(right_wheel)
-                    # x_vec_list.append(field_effect[0])
-                    # y_vec_list.append(field_effect[1])
-                    sleep(0.05)
+                    sleep(0.5)
 
             else:
                 # Sometimes the camera fails to find the robot, and it
