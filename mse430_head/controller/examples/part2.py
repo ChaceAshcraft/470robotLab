@@ -111,29 +111,30 @@ def main(host='localhost', port=55555, goal="I0"):
             return [0, 0]
         theta = atan2(marker_location[1] - robot_location[1], marker_location[0] - robot_location[0])
         #  a constant to give them some angle
-        if d >= self.radius:
+        if d >= radius:
             return [-field_strength*(spread + radius - d)*cos(theta),
                          -field_strength * (spread + radius - d) * sin(theta)]
         else:
             return [-np.sign(cos(theta))*infinity, -np.sign(sin(theta))*infinity]
  
 
-    def sonar(robot_location, direction, granularity, dist, obst_radius):
+    def sonar(robot_location, direction, granularity, dist, obst_radius, obstacles):
         n = int(dist/granularity)
-        for i in range(n):
-            check_point = [robot_location[0] + granularity*cos(direction), robot_location[1] + granularity*sin(direction)] 
+        for i in range(1, n+1):
+            check_point = [robot_location[0] + i*granularity*cos(direction), robot_location[1] + i*granularity*sin(direction)] 
             for obstacle in obstacles.values():
                 d = distance(check_point, obstacle)
-                if d  <= obst_radius:
+                if d <= obst_radius:
                     return check_point 
         return None
                     
     
-    def check_sonars(robot_location, granularity, distance, obst_radius, spread, field_strength, infinity):
-        field_effect = np.array([0, 0])
+    def check_sonars(robot_location, granularity, distance, obst_radius, spread, field_strength, infinity, obstacles):
+        field_effect = np.array([0., 0.])
+        print("num obstacles= ", len(obstacles))
         for i in range(16):
             angle = i*np.pi/8
-            res = sonar(robot_location, angle, granularity, distance, obst_radius)
+            res = sonar(robot_location, angle, granularity, distance, obst_radius, obstacles)
             if res is not None:
                 field_effect += repulsor_effect(robot_location, res, obst_radius, spread, field_strength, infinity) 
         return field_effect
@@ -155,7 +156,7 @@ def main(host='localhost', port=55555, goal="I0"):
     obstacles = {} 
     max_rob_speed = 2.3 #adjust as needed
     attractor_strength = 3.53
-    repulsor_strength = 0.32
+    repulsor_strength = 0.22
     tangent_strength = 0.78
     trans_err_list = np.array([0,0,0,0,0])
     angle_err_list = np.array([0,0,0,0,0])
@@ -163,38 +164,34 @@ def main(host='localhost', port=55555, goal="I0"):
     tangs_fields = {'74':'counter', '42':'counter', '72':'counter', '32':'counter',
                      '20':'clock', '97':'clock', '99':'clock'}
 
-    k_trans = [0.01, 0.01, 0.01]
-    k_angle = [0.2, 0.3, 0.01]
+    k_trans = [0.01, 0.0, 0.0]
+    k_angle = [0.2, 0.4, 0.01]
 
     markers = do('where others')
     marker_radius =  distance(markers[goal]['corners'][0],
                                         markers[goal]['center'])
 
     goal_location = markers[goal]['center']
+    goal_location[1] *= -1
+    print("Goal= ", goal)
 
     for key in markers.keys():
         if key != 'time':
-            if key == goal:
-                location = markers[goal]['center']
-                location[1] *= -1
-                obstacles[goal] = location
-            else:
+            if key != goal:
                 location = markers[key]['center']
                 location[1] *= -1
                 obstacles[key] = location
                 
-                
+    print("obstacles: ", obstacles)
+    sleep(1)
     # Running loop
     try:
 
         you_did_it = False
         turn_coefficient = 4
-        cur_direction = None
-        attractor = PotentialField([0,0], 1, 2, 0, field_type='attractor')
-
-
-        vx = 0;
-        vy = 0;
+        cur_direction = 'a'#None 
+        #attractor = PotentialField([0,0], 1, 2, 0, field_type='attractor')
+        attractor = PotentialField([-50000, goal_location[1]], 1, 10, attractor_strength, field_type='attractor')
 
         while not you_did_it:
             # Get the position of the robot. The result should be a
@@ -235,6 +232,8 @@ def main(host='localhost', port=55555, goal="I0"):
                 cur_rob_loc[1] *= -1 # adjust for y being down
 
                 print("robot loc, ", cur_rob_loc)
+                print("goal loc: ", goal_location)
+                print("current direction: ", cur_direction)
                 if distance(cur_rob_loc, goal_location) < 2.75*marker_radius:
                     you_did_it = True
                     do('speed 0 0')
@@ -246,41 +245,48 @@ def main(host='localhost', port=55555, goal="I0"):
                         sleep(0.05)
                         if new_direction == cur_direction:
                             attractor.field_strength = 0
+                            cur_direction = None
                         else:
                             if new_direction == 'w':
                                 print("Turn up")
                                 cur_direction = new_direction
-                                att_loc = [cur_rob_loc[0], 10000]
+                                att_loc = [cur_rob_loc[0], 50000]
                                 attractor = PotentialField(att_loc, 1, 10, attractor_strength, field_type='attractor')
                             elif new_direction == 's':
                                 cur_direction = new_direction
                                 print("Turn down")
-                                att_loc = [cur_rob_loc[0], -10000]
+                                att_loc = [cur_rob_loc[0], -50000]
                                 attractor = PotentialField(att_loc, 1, 10, attractor_strength, field_type='attractor')
                             elif new_direction == 'd':
                                 cur_direction = new_direction
                                 print("Turn right")
-                                att_loc = [10000, cur_rob_loc[1]]
+                                att_loc = [50000, cur_rob_loc[1]]
                                 attractor = PotentialField(att_loc, 1, 10, attractor_strength, field_type='attractor')
                             elif new_direction == 'a':
                                 cur_direction = new_direction
                                 print("Turn left")
-                                att_loc = [-10000, cur_rob_loc[1]]
+                                att_loc = [-50000, cur_rob_loc[1]]
                                 attractor = PotentialField(att_loc, 1, 10, attractor_strength, field_type='attractor')
 
 
                     field_effect = np.array([0., 0.])
                     att_effect = attractor.o_effect(cur_rob_loc)
-                    obst_effect = check_sonars(cur_rob_loc, marker_radius/2.0, marker_radius*16.0, marker_radius, marker_radius*5,repulsor_strength, 10)
+                    obst_effect = check_sonars(cur_rob_loc, marker_radius/2.5, marker_radius*16.0, marker_radius, marker_radius*5,repulsor_strength, 10, obstacles)
                     # check_sonars(robot_location, granularity, distance, obst_radius, spread, field_strength, infinity):
 
                     print("attract effect: ", att_effect)
                     print("obstacle effect: ", obst_effect)
                     
                     field_effect += att_effect + obst_effect
+                    print("field effect: ", field_effect)
 
                     cur_trans_err = distance(cur_rob_loc, cur_rob_loc + field_effect)
-                    cur_angle_err =  calc_angle2(*field_effect) - cur_robot_angle
+                    print(field_effect.sum())
+                    if abs(field_effect.sum()) > 0:
+                        print("non_zero field_effect")
+                        cur_angle_err =  calc_angle2(*field_effect) - cur_robot_angle
+                    else:
+                        cur_angle_err = 0
                     trans_err_list = trans_err_list[1:]
                     angle_err_list = angle_err_list[1:]
                     trans_err_list = np.append(trans_err_list, cur_trans_err)
@@ -289,8 +295,7 @@ def main(host='localhost', port=55555, goal="I0"):
                     drive = PID(trans_err_list, k_trans[0], k_trans[1], k_trans[2])
                     turn = PID(angle_err_list, k_angle[0], k_angle[1], k_angle[2])
 
-                    if turn > max_rob_speed:
-                        turn = max_rob_speed
+                    print("original drive,turn= {},{}".format(drive, turn))
 
                     '''
                     ax = field_effect[0]
@@ -304,14 +309,22 @@ def main(host='localhost', port=55555, goal="I0"):
                     turn = np.sign(angle_diff) * turn_coefficient * np.sqrt(np.abs(angle_diff))
                     '''
 
-                    left_wheel = int(our_round(drive - turn_coefficient*turn))
-                    right_wheel = int(our_round(drive + turn_coefficient*turn))
                     if drive > max_rob_speed:
-                        left_wheel =  int(our_round(max_rob_speed - turn_coefficient * turn))
-                        right_wheel = int(our_round(max_rob_speed + turn_coefficient * turn))
+                        drive = max_rob_speed
+                    print("the three= ", drive, turn, turn_coefficient)
 
-                    do('speed {} {}'.format(left_wheel, right_wheel))
-                    sleep(0.5)
+                    if abs(turn_coefficient*turn) > max_rob_speed:
+                        print("turn_coef > max")
+                        left_wheel =  int(our_round(drive - max_rob_speed))
+                        right_wheel = int(our_round(drive + max_rob_speed))
+                    else:
+                        left_wheel = int(our_round(drive - turn_coefficient*turn))
+                        right_wheel = int(our_round(drive + turn_coefficient*turn))
+
+                    print("sent left_wheel,right_wheel={},{}".format(left_wheel,right_wheel))
+                    #do('speed {} {}'.format(left_wheel, right_wheel))
+                    #sleep(0.5)
+                    input("press enter")
 
             else:
                 # Sometimes the camera fails to find the robot, and it
@@ -327,18 +340,6 @@ def main(host='localhost', port=55555, goal="I0"):
     # Stop with ^C
     except KeyboardInterrupt:
         print('\nStopping')
-        # t = np.linspace(len(left_wheel_list))
-        # plt.plot(t, np.array(left_wheel_list), label='left_wheel')
-        # plt.plot(t, np.array(right_wheel_list), label='right_wheel')
-        # plt.legend()
-        # plt.show()
-        # plt.savefig("wheels.jpg")
-        # plt.figure()
-        # plt.plot(t, np.array(x_vec_list), label='x_mag')
-        # plt.plot(t, np.array(y_vec_list), label='y_mag')
-        # plt.legend()
-        # plt.show()
-        # plt.savefig("vecs.jpg")
 
     # Close the connection (wait for the last command to return)
     sleep(0.5)
