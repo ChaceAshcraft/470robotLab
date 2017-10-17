@@ -8,6 +8,8 @@ class search_Node:
     node, and a set of pointers to other nodes it is connected to.
     """
 
-    def __init__(self, location, neighbors=None):
+    def __init__(self, location, neighbors=None, obstacle=False, goal=False):
         self.location = location
         self.neighbors = neighbors
+        self.hasObstacle = obstacle 
+        self.hasGoal = goal 
