@@ -13,17 +13,15 @@ class Robot_AStar_Graph:
     to do the A* search.
     """
 
-    def __init__(self, nodes, root, goal_location, heuristic_function=None):
+    def __init__(self, root, goal_location, heuristic_function=None):
         """
-        Class constructor. 
-        param: nodes -- list (or dictionary?) of search_node objects
+        Class constructor.
         param: root -- search_node object representing the location of the robot
         param: goal_location -- 2d vector (list) indicating x,y location of the goal
         param: heuristic_function -- function to be called on a search_node object
                 representing the h function of the A* search, default is distance to
                 goal_location
         """
-        self.nodes = nodes
         self.root = root
         self.goal_location = goal_location
         if heuristic_function is not None:

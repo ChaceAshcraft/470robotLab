@@ -7,17 +7,15 @@ class search_Node:
     node, and a set of pointers to other nodes it is connected to.
     """
 
-    def __init__(self, location, neighbors=None, obstacle=False, goal=False):
+    def __init__(self, location, neighbors=[], goal=False):
         """
         param: location -- 2d vector denoting the top left corner of the node tile
         param: neighbors -- list of nodes this node is connected to
-        param: obstacle -- True is there is an obstacle in this node, False otherwise
         param: goal -- True is the goal is in in this node, False otherwise
         
         """
         self.location = location
         self.neighbors = neighbors
-        self.hasObstacle = obstacle 
         self.hasGoal = goal 
         self.isVisited = False
         self.searchParent = None
@@ -28,3 +26,7 @@ class search_Node:
             return [self.center]
         else:
             return self.searchParent.expandPath().append(self.center)
+
+    def addNeighbor(self, new_neighbor):
+        self.neighbors.append(new_neighbor)
+        new_neighbor.neighbors.append(self)
