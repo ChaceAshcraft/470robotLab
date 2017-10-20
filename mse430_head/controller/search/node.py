@@ -1,4 +1,4 @@
-
+import numpy as np
 
 class search_Node:
     """
@@ -19,14 +19,24 @@ class search_Node:
         self.hasGoal = goal 
         self.isVisited = False
         self.searchParent = None
-        self.searchPathLength = 0
+        self.searchPathLength = np.inf 
+
+        self.priority = np.inf
 
     def expandPath(self):
+        print("Expanding ", self.location) 
         if self.searchParent is None:
-            return [self.center]
+            print("got to root? ", self.location)
+            return [self.location]
         else:
-            return self.searchParent.expandPath().append(self.center)
+            temp = self.searchParent.expandPath()
+            temp.append(self.location)
+            print("not root", temp)
+            return temp
 
     def addNeighbor(self, new_neighbor):
         self.neighbors.append(new_neighbor)
         new_neighbor.neighbors.append(self)
+
+    def __lt__(self, other):
+        return self.priority < other.priority

@@ -40,26 +40,33 @@ class Robot_AStar_Graph:
                 being the goal node.
         """
         goalNode = None
-        if root.hasGoal:
-            return [root.center]
+        if self.root.hasGoal:
+            return [self.root.center]
         PQ = queue.PriorityQueue()
-        root.isVisited = True
-        root.searchPathLength = 0
-        PQ.put((0, root))
+        self.root.isVisited = True
+        self.root.searchPathLength = 0
+        self.root.priority = 0
+        PQ.put(self.root)
         while not PQ.empty() and goalNode is None:
-            (d,n) = PQ.get() # PQ.get() returns a tuple (priority, node)
+            n = PQ.get() # PQ.get() returns a tuple (priority, node)
             for neighbor in n.neighbors:
+                print(neighbor.location)
                 if not neighbor.isVisited:
+                    neighbor.istVisited = True
                     neighbor.searchParent = n
                     neighbor.searchPathLength = (n.searchPathLength + 
                                         mh_distance(n.location, neighbor.location))
                     if neighbor.hasGoal:
                         goalNode = neighbor
+                        print("search found a goal node!")
                         break
                     else:
-                        PQ.put((neighbor.searchPathLength + self.H(neighbor), neighbor))
+                        neighbor.priority = neighbor.searchPathLength + self.H(neighbor)
+                        #print("priority, neighbor=", neighbor.priority, neighbor)
+                        PQ.put(neighbor)
 
         if goalNode is not None:
+            print("not none!")
             return goalNode.expandPath()
         else:
             return None

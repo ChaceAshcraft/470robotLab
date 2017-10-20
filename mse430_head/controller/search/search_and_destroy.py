@@ -122,6 +122,7 @@ def main(host='localhost', port=55555, goal="I0"):
                 if is_valid:
                     if overlap(node_center, goal_location, tile_length, tile_length, True):
                         new_node = search_Node(node_center, goal=True)
+                        print("found goal", node_center, goal_location)
                     elif overlap(node_center, root_location, tile_length, 0, True):
                         new_node = search_Node(node_center)
                         print("found root!", node_center, root_location)
@@ -145,9 +146,9 @@ def main(host='localhost', port=55555, goal="I0"):
 
 
     def overlap(center1, center2, length1, length2, other_const_just_to_annoy_him):
-        half_avg_length = (length1 + length2) / 4.0
-        inX = abs(center1[0] - center2[0]) <= half_avg_length
-        inY = abs(center1[1] - center2[1]) <= half_avg_length
+        avg_length = (length1 + length2) / 2.0
+        inX = abs(center1[0] - center2[0]) <= avg_length
+        inY = abs(center1[1] - center2[1]) <= avg_length
         return inX and inY and other_const_just_to_annoy_him
 
     # not sure these will be useful for our implementation
@@ -186,11 +187,9 @@ def main(host='localhost', port=55555, goal="I0"):
                                         markers[goal]['corners'][1])
 
     goal_location = markers[goal]['center']
-    goal_location[1] *= -1
+    goal_location[1] = height - goal_location[1]
     print("Goal= ", goal)
     print("Goalloc, ", goal_location)
-    check =[goal_location[0] + 10, goal_location[1] + 10]
-    print("overlap goal", overlap(goal_location, goal_location, marker_side_length, 0, True))
 
     for key in markers.keys():
         if key != 'time':
@@ -201,8 +200,13 @@ def main(host='localhost', port=55555, goal="I0"):
 
     if A_star_is_born:
         robot_location = do('where robot')['center']
+        print("robot_location ", robot_location)
+        print("marker Length ", marker_side_length)
         graph = make_A_star_graph(width, height, marker_side_length, obstacles, goal_location, robot_location)
         path = graph.search()
+
+        print("path: ", path)
+        sleep(25)
 
     # Running loop
     try:
@@ -210,7 +214,7 @@ def main(host='localhost', port=55555, goal="I0"):
         you_did_it = False
         turn_coefficient = 4
         cur_direction = None
-        cur_path_idx = 1
+        cur_path_idx = 0
 
         while not you_did_it:
             # Get the position of the robot. The result should be a
