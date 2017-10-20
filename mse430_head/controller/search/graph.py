@@ -1,6 +1,6 @@
 import numpy as np
 import queue
-from node import search_node
+from node import search_Node
 
 def mh_distance(point1, point2):
     return abs(point1[0] - point2[0]) + abs(point1[1] - point2[1])

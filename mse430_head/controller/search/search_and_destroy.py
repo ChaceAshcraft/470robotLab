@@ -109,7 +109,7 @@ def main(host='localhost', port=55555, goal="I0"):
     def make_A_star_graph(width, height, tile_length, obstacles, goal_location, root_location):
         num_tiles_x = int(width/tile_length)
         num_tiles_y = int(height/tile_length)
-        graph_guts = [[None for i in range(num_tiles_x)] for i in range(num_tiles_y)]
+        graph_guts = [[None for i in range(num_tiles_y)] for i in range(num_tiles_x)]
         root = None
         for i in range(num_tiles_x):
             for j in range(num_tiles_y):
@@ -124,6 +124,7 @@ def main(host='localhost', port=55555, goal="I0"):
                         new_node = search_Node(node_center, goal=True)
                     elif overlap(node_center, root_location, tile_length, 0, True):
                         new_node = search_Node(node_center)
+                        print("found root!", node_center, root_location)
                         root = new_node
                     else:
                         new_node = search_Node(node_center)
@@ -131,10 +132,10 @@ def main(host='localhost', port=55555, goal="I0"):
         for x in range(num_tiles_x):
             for y in range(num_tiles_y):
                 if graph_guts[x][y] is not None:
-                    if graph_guts[x + 1][y] != None:
+                    if x+1 < num_tiles_x and graph_guts[x + 1][y] != None:
                         graph_guts[x][y].addNeighbor(graph_guts[x + 1][y])
-                    if y < num_tiles_y:
-                        if graph_guts[x + 1][y + 1] is not None:
+                    if y+1 < num_tiles_y:
+                        if x+1 < num_tiles_x and graph_guts[x + 1][y + 1] is not None:
                             graph_guts[x][y].addNeighbor(graph_guts[x + 1][y + 1])
                         if graph_guts[x][y + 1] is not None:
                             graph_guts[x][y].addNeighbor(graph_guts[x][y + 1])
@@ -165,8 +166,8 @@ def main(host='localhost', port=55555, goal="I0"):
 
     # Parameters and initialize variables
 
-    width = 1500
-    height = 1200
+    width = 2000
+    height = 1000
     path = None
     max_rob_speed = 2.3 #adjust as needed
     k_trans = [0.01, 0.0, 0.0]
@@ -187,6 +188,9 @@ def main(host='localhost', port=55555, goal="I0"):
     goal_location = markers[goal]['center']
     goal_location[1] *= -1
     print("Goal= ", goal)
+    print("Goalloc, ", goal_location)
+    check =[goal_location[0] + 10, goal_location[1] + 10]
+    print("overlap goal", overlap(goal_location, goal_location, marker_side_length, 0, True))
 
     for key in markers.keys():
         if key != 'time':
