@@ -106,7 +106,7 @@ def main(host='localhost', port=55555, goal="I0"):
             return 1
         return 0
 
-    def make_A_star_grid(width, height, tile_length, obstacles, goal_location, root_location):
+    def make_A_star_graph(width, height, tile_length, obstacles, goal_location, root_location):
         num_tiles_x = int(width/tile_length)
         num_tiles_y = int(height/tile_length)
         graph_guts = [[None for i in range(num_tiles_x)] for i in range(num_tiles_y)]
@@ -162,18 +162,24 @@ def main(host='localhost', port=55555, goal="I0"):
     loop, we assume that the markers do not move and only do field
     computations on the set fields and the current robot postion.
     '''
-    good_nodes = {}
+
+    # Parameters and initialize variables
+
     width = 1500
     height = 1200
-
-    obstacles = {} 
+    path = None
     max_rob_speed = 2.3 #adjust as needed
-    trans_err_list = np.array([0,0,0,0,0])
-    angle_err_list = np.array([0,0,0,0,0])
-
     k_trans = [0.01, 0.0, 0.0]
     k_angle = [0.2, 0.4, 0.01]
     A_star_is_born = True
+
+    obstacles = {} 
+    good_nodes = {}
+    trans_err_list = np.array([0,0,0,0,0])
+    angle_err_list = np.array([0,0,0,0,0])
+
+    # Start processing stuff
+
     markers = do('where others')
     marker_side_length =  distance(markers[goal]['corners'][0],
                                         markers[goal]['corners'][1])
@@ -190,7 +196,9 @@ def main(host='localhost', port=55555, goal="I0"):
                 obstacles[key] = location
 
     if A_star_is_born:
-        grid = make_A_star_grid(width, height, marker_side_length, obstacles, goal_location)
+        robot_location = do('where robot')['center']
+        graph = make_A_star_graph(width, height, marker_side_length, obstacles, goal_location, robot_location)
+        path = graph.search()
 
     # Running loop
     try:
@@ -198,6 +206,7 @@ def main(host='localhost', port=55555, goal="I0"):
         you_did_it = False
         turn_coefficient = 4
         cur_direction = None
+        cur_path_idx = 1
 
         while not you_did_it:
             # Get the position of the robot. The result should be a
@@ -209,27 +218,6 @@ def main(host='localhost', port=55555, goal="I0"):
             if 'orientation' in res:
                 lost_count = 0
                 cur_robot_angle = calc_angle(*res['orientation'])
-                '''
-                # Calculate an error in the angle, which gives a
-                # direction (sign) to turn and also an idea of what
-                # speed to go (the magnitude). Note that this is the
-                # same as the P term in a PID controller. A PD or PID
-                # controller would do even better (hint hint).
-                angle_error = normalize_angle(angle_target - angle)
-
-                # Also calculate an error in the position; we want it
-                # to be in the center of the image (on a centered
-                # horizontal line). I compensate for the reversed
-                # coordinates by negating the result.
-                position_error = -(position_target - res['center'][1])
-
-                # These two errors tell us how much we want to turn
-                # and how much we want to move. We can use both of
-                # these at the same time if we're clever.
-                turn = 5 * angle_error
-                drive = 0.05 * cos(angle_error) * position_error
-                do('speed {} {}'.format(round(drive-turn), round(drive+turn)))
-                '''
 
                 # accrue effect of potential fields on the robot
                 cur_rob_loc = np.array(res['center'])
@@ -238,17 +226,20 @@ def main(host='localhost', port=55555, goal="I0"):
                 #print("robot loc, ", cur_rob_loc)
                 #print("goal loc: ", goal_location)
 
-                if distance(cur_rob_loc, goal_location) < 2.75*marker_side_length:
+                if distance(cur_rob_loc, path[cur_path_idx]) < marker_side_length:
+                    cur_path_idx += 1
+
+                if distance(cur_rob_loc, goal_location) < 1.5*marker_side_length:
                     you_did_it = True
                     do('speed 0 0')
                 else:
-                    cur_trans_err = distance(cur_rob_loc, cur_rob_loc + field_effect)
+                    cur_trans_err = distance(cur_rob_loc, path[cur_path_idx])
                     if abs(field_effect.sum()) > 0:
                         #print("field anglei ", calc_angle2(*field_effect))  
                         #print('cur_robot_angle, ', cur_robot_angle)
                         #print('difference, ',calc_angle2(*field_effect) - cur_robot_angle) 
                         #print('mod difference, ',(calc_angle2(*field_effect) - cur_robot_angle) % (2 * np.pi))
-                        cur_angle_err = (calc_angle2(*field_effect) - cur_robot_angle) % (2*np.pi)
+                        cur_angle_err = (calc_angle2(*path[cur_path_idx]) - cur_robot_angle) % (2*np.pi)
                         #print("end_cur_anglei, ", cur_angle_err)
                         if cur_angle_err > np.pi:
                             cur_angle_err -= 2*np.pi
@@ -278,7 +269,7 @@ def main(host='localhost', port=55555, goal="I0"):
 
                     print("instruct: left_wheel,right_wheel={},{}".format(left_wheel,right_wheel))
                     do('speed {} {}'.format(left_wheel, right_wheel))
-                    sleep(0.5)
+                    sleep(0.05)
                     #input("press enter")
 
             else:
