@@ -234,18 +234,18 @@ def main(host='localhost', port=55555, goal="I0"):
                     do('speed 0 0')
                 else:
                     cur_trans_err = distance(cur_rob_loc, path[cur_path_idx])
-                    if abs(field_effect.sum()) > 0:
+                    # if abs(field_effect.sum()) > 0:
                         #print("field anglei ", calc_angle2(*field_effect))  
                         #print('cur_robot_angle, ', cur_robot_angle)
                         #print('difference, ',calc_angle2(*field_effect) - cur_robot_angle) 
                         #print('mod difference, ',(calc_angle2(*field_effect) - cur_robot_angle) % (2 * np.pi))
-                        cur_angle_err = (calc_angle2(*path[cur_path_idx]) - cur_robot_angle) % (2*np.pi)
+                    cur_angle_err = (calc_angle2(*path[cur_path_idx]) - cur_robot_angle) % (2*np.pi)
                         #print("end_cur_anglei, ", cur_angle_err)
-                        if cur_angle_err > np.pi:
-                            cur_angle_err -= 2*np.pi
+                    if cur_angle_err > np.pi:
+                        cur_angle_err -= 2*np.pi
                         #print("end_cur_anglei, ", cur_angle_err)
-                    else:
-                        cur_angle_err = 0
+                    # else:
+                    #     cur_angle_err = 0
                     trans_err_list = trans_err_list[1:]
                     angle_err_list = angle_err_list[1:]
                     trans_err_list = np.append(trans_err_list, cur_trans_err)
