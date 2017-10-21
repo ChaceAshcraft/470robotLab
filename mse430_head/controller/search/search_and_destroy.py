@@ -131,17 +131,27 @@ def main(host='localhost', port=55555, goal="I0"):
                         new_node = search_Node(node_center)
                     graph_guts[i][j] = new_node
         for x in range(num_tiles_x):
-            for y in range(num_tiles_y):
+            for y in range(num_tiles_y-1, 0, -1):
                 if graph_guts[x][y] is not None:
-                    if x+1 < num_tiles_x and graph_guts[x + 1][y] != None:
+                    if x+1 < num_tiles_x and graph_guts[x + 1][y] is not None:
                         graph_guts[x][y].addNeighbor(graph_guts[x + 1][y])
                     if y+1 < num_tiles_y:
                         if x+1 < num_tiles_x and graph_guts[x + 1][y + 1] is not None:
                             graph_guts[x][y].addNeighbor(graph_guts[x + 1][y + 1])
                         if graph_guts[x][y + 1] is not None:
                             graph_guts[x][y].addNeighbor(graph_guts[x][y + 1])
-                        if x != 0:
+                        if x != 0 and graph_guts[x - 1][y + 1] is not None:
                             graph_guts[x][y].addNeighbor(graph_guts[x - 1][y + 1])
+        '''
+        for x in range(num_tiles_x):
+            for y in range(num_tiles_y-1, 0, -1):
+                print("node: ", graph_guts[x][y].location)
+                print("num neighbors: ", len(graph_guts[x][y].neighbors))
+                #for neighbor in graph_guts[x][y].neighbors:
+                    #print("Neighbor: ", neighbor.location)
+                    #sleep(1)
+                input("Press enter to continue")
+        '''
         return Robot_AStar_Graph(root, goal_location)
 
 
@@ -150,11 +160,6 @@ def main(host='localhost', port=55555, goal="I0"):
         inX = abs(center1[0] - center2[0]) <= avg_length
         inY = abs(center1[1] - center2[1]) <= avg_length
         return inX and inY and other_const_just_to_annoy_him
-
-    # not sure these will be useful for our implementation
-    angle_target = calc_angle(0, -1)
-    position_target = 1080 / 2
-
 
     lost_count = 0
 
@@ -168,11 +173,11 @@ def main(host='localhost', port=55555, goal="I0"):
     # Parameters and initialize variables
 
     width = 2000
-    height = 1000
+    height = 1250
     path = None
-    max_rob_speed = 2.3 #adjust as needed
-    k_trans = [0.01, 0.0, 0.0]
-    k_angle = [0.2, 0.4, 0.01]
+    max_rob_speed = 2. #adjust as needed
+    k_trans = [0.01, 0.01, 0.0]
+    k_angle = [0.05, 0.3, 0.01]
     A_star_is_born = True
 
     obstacles = {} 
@@ -195,24 +200,27 @@ def main(host='localhost', port=55555, goal="I0"):
         if key != 'time':
             if key != goal:
                 location = markers[key]['center']
-                location[1] *= -1
+                location[1] = height - location[1]
                 obstacles[key] = location
 
     if A_star_is_born:
         robot_location = do('where robot')['center']
+        robot_location[1] = height - robot_location[1]
         print("robot_location ", robot_location)
         print("marker Length ", marker_side_length)
-        graph = make_A_star_graph(width, height, marker_side_length, obstacles, goal_location, robot_location)
+        graph = make_A_star_graph(width, height, 1.5*marker_side_length, obstacles, goal_location, robot_location)
         path = graph.search()
 
-        print("path: ", path)
-        sleep(25)
+        print("path: ")
+        for i in range(len(path)):
+            print(path[i])
+        input("just before the go")
 
     # Running loop
     try:
 
         you_did_it = False
-        turn_coefficient = 4
+        turn_coefficient = 7
         cur_direction = None
         cur_path_idx = 0
 
@@ -229,26 +237,43 @@ def main(host='localhost', port=55555, goal="I0"):
 
                 # accrue effect of potential fields on the robot
                 cur_rob_loc = np.array(res['center'])
-                cur_rob_loc[1] *= -1 # adjust for y being down
+                cur_rob_loc[1] = height-cur_rob_loc[1] # adjust for y being down
 
                 #print("robot loc, ", cur_rob_loc)
                 #print("goal loc: ", goal_location)
 
-                if distance(cur_rob_loc, path[cur_path_idx]) < marker_side_length:
+                #mh_distance(cur_rob_loc, path[cur_path_idx]) < .5*marker_side_length
+
+                if (overlap(cur_rob_loc, path[cur_path_idx], 1.5*marker_side_length, 
+                        marker_side_length, True) 
+                        and path[cur_path_idx] != path[-1]):
                     cur_path_idx += 1
+                    do('speed 0 0')
+                    sleep(0.33)
+                    #input("double check")
 
                 if distance(cur_rob_loc, goal_location) < 1.5*marker_side_length:
                     you_did_it = True
                     do('speed 0 0')
                 else:
+                    print("Robot Loc ", cur_rob_loc)
+                    print("path point ", path[cur_path_idx])
+                    print("path index: ", cur_path_idx)
                     cur_trans_err = distance(cur_rob_loc, path[cur_path_idx])
                     # if abs(field_effect.sum()) > 0:
-                        #print("field anglei ", calc_angle2(*field_effect))  
-                        #print('cur_robot_angle, ', cur_robot_angle)
-                        #print('difference, ',calc_angle2(*field_effect) - cur_robot_angle) 
-                        #print('mod difference, ',(calc_angle2(*field_effect) - cur_robot_angle) % (2 * np.pi))
+                    path_vec = [path[cur_path_idx][0] - cur_rob_loc[0],
+                                path[cur_path_idx][1] - cur_rob_loc[1]]
+                    print("point angle ", calc_angle2(*path_vec))  
+                    print('cur_robot_angle, ', cur_robot_angle)
+                    '''
+                    print('difference, ',calc_angle2(*path[cur_path_idx]) - cur_robot_angle) 
+                    print('mod difference, ',(calc_angle2(*path[cur_path_idx]) - cur_robot_angle) % (2*np.pi))
                     cur_angle_err = (calc_angle2(*path[cur_path_idx]) - cur_robot_angle) % (2*np.pi)
-                        #print("end_cur_anglei, ", cur_angle_err)
+                    '''
+                    print('difference, ',calc_angle2(*path_vec) - cur_robot_angle) 
+                    print('mod difference, ',(calc_angle2(*path_vec) - cur_robot_angle) % (2*np.pi))
+                    cur_angle_err = (calc_angle2(*path_vec) - cur_robot_angle) % (2*np.pi)
+                        #print("end_cur_angle, ", cur_angle_err)
                     if cur_angle_err > np.pi:
                         cur_angle_err -= 2*np.pi
                         #print("end_cur_anglei, ", cur_angle_err)

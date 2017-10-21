@@ -7,7 +7,7 @@ class search_Node:
     node, and a set of pointers to other nodes it is connected to.
     """
 
-    def __init__(self, location, neighbors=[], goal=False):
+    def __init__(self, location, neighbors=None, goal=False):
         """
         param: location -- 2d vector denoting the top left corner of the node tile
         param: neighbors -- list of nodes this node is connected to
@@ -15,7 +15,10 @@ class search_Node:
         
         """
         self.location = location
-        self.neighbors = neighbors
+        if neighbors is None:
+            self.neighbors = []
+        else:
+            self.neighbors = neighbors
         self.hasGoal = goal 
         self.isVisited = False
         self.searchParent = None
@@ -35,8 +38,16 @@ class search_Node:
             return temp
 
     def addNeighbor(self, new_neighbor):
+        #print("New Add neighbor call")
+        #print("Self: ", self.location)
+        #print("neighbor: ", new_neighbor.location)
+        #print("\n")
+        #print("Before: \n", self.neighbors, '\n', new_neighbor.neighbors)
         self.neighbors.append(new_neighbor)
+        #print("Between: \n", self.neighbors, '\n', new_neighbor.neighbors)
         new_neighbor.neighbors.append(self)
+        #print("After: \n", self.neighbors, '\n', new_neighbor.neighbors)
+        #input("Enter to continue")        
 
     def __lt__(self, other):
         return self.priority < other.priority

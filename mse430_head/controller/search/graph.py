@@ -50,9 +50,10 @@ class Robot_AStar_Graph:
         while not PQ.empty() and goalNode is None:
             n = PQ.get() # PQ.get() returns a tuple (priority, node)
             for neighbor in n.neighbors:
-                print(neighbor.location)
                 if not neighbor.isVisited:
-                    neighbor.istVisited = True
+                    print("visited ", neighbor.isVisited)
+                    print(neighbor.location)
+                    neighbor.isVisited = True
                     neighbor.searchParent = n
                     neighbor.searchPathLength = (n.searchPathLength + 
                                         mh_distance(n.location, neighbor.location))
@@ -62,7 +63,6 @@ class Robot_AStar_Graph:
                         break
                     else:
                         neighbor.priority = neighbor.searchPathLength + self.H(neighbor)
-                        #print("priority, neighbor=", neighbor.priority, neighbor)
                         PQ.put(neighbor)
 
         if goalNode is not None:
