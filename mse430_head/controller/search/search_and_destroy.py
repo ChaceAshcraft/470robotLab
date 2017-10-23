@@ -5,7 +5,9 @@ from math import atan2, sin, cos, pi
 from time import sleep
 import numpy as np
 from graph import Robot_AStar_Graph
+from graph import Robot_RRT_Graph
 from node import search_Node
+from node import rrt_Node
 
 def main(host='localhost', port=55555, goal="I0"):
     """
@@ -153,6 +155,12 @@ def main(host='localhost', port=55555, goal="I0"):
                 input("Press enter to continue")
         '''
         return Robot_AStar_Graph(root, goal_location)
+
+    def make_rrt_graph(width, height, tile_length, obstacles, goal_location, root_location):
+        obstacle_locations = []
+        for obstacle in obstacles.values:
+            obstacle_locations.append(obstacle)
+        return Robot_RRT_Graph(rrt_Node(root_location, 0), tile_length, obstacle_locations, goal_location, width, height)
 
 
     def overlap(center1, center2, length1, length2, other_const_just_to_annoy_him):
