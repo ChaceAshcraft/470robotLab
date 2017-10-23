@@ -51,3 +51,39 @@ class search_Node:
 
     def __lt__(self, other):
         return self.priority < other.priority
+
+class rrt_Node:
+
+    def __init__(self, location, dist_from_root, children=None, goal=False):
+        self.location = location
+        self.distance_from_root = dist_from_root
+        if children is None:
+            self.children = []
+        else:
+            self.children = children
+        self.goal = goal
+
+    def distance_to_location(self, other_location):
+        return np.sqrt((self.location[0] - other_location[0]) ** 2 + (self.location[1] - other_location[1]) ** 2)
+
+    def get_separation_from_root(self):
+        return self.distance_from_root
+
+    def get_growth_factor(self):
+        return .9**self.distance_from_root
+
+    def get_location(self):
+        return self.location
+
+    def add_child(self, other_node):
+        self.children.append(other_node)
+
+    def get_path(self):
+        if self.goal is True:
+            return [self]
+        else:
+            for child in self.children:
+                path = child.get_path()
+                if path is not None:
+                    return path.append(self)
+            return None
