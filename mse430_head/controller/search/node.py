@@ -12,22 +12,22 @@ class search_Node:
         param: location -- 2d vector denoting the top left corner of the node tile
         param: neighbors -- list of nodes this node is connected to
         param: goal -- True is the goal is in in this node, False otherwise
-        
+
         """
         self.location = location
         if neighbors is None:
             self.neighbors = []
         else:
             self.neighbors = neighbors
-        self.hasGoal = goal 
+        self.hasGoal = goal
         self.isVisited = False
         self.searchParent = None
-        self.searchPathLength = np.inf 
+        self.searchPathLength = np.inf
 
         self.priority = np.inf
 
     def expandPath(self):
-        print("Expanding ", self.location) 
+        print("Expanding ", self.location)
         if self.searchParent is None:
             print("got to root? ", self.location)
             return [self.location]
@@ -47,7 +47,7 @@ class search_Node:
         #print("Between: \n", self.neighbors, '\n', new_neighbor.neighbors)
         new_neighbor.neighbors.append(self)
         #print("After: \n", self.neighbors, '\n', new_neighbor.neighbors)
-        #input("Enter to continue")        
+        #input("Enter to continue")
 
     def __lt__(self, other):
         return self.priority < other.priority
@@ -80,10 +80,14 @@ class rrt_Node:
 
     def get_path(self):
         if self.goal is True:
+            print("Reached the goal!")
             return [self]
         else:
             for child in self.children:
                 path = child.get_path()
                 if path is not None:
-                    return path.append(self)
+                    print("Path not none: ", path, " Here's self: ", self)
+                    path.append(self)
+                    print("New path: ", path)
+                    return path
             return None

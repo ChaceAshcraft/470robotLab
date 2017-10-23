@@ -158,7 +158,7 @@ def main(host='localhost', port=55555, goal="I0"):
 
     def make_rrt_graph(width, height, tile_length, obstacles, goal_location, root_location):
         obstacle_locations = []
-        for obstacle in obstacles.values:
+        for obstacle in obstacles.values():
             obstacle_locations.append(obstacle)
         return Robot_RRT_Graph(rrt_Node(root_location, 0), tile_length, obstacle_locations, goal_location, width, height)
 
@@ -186,7 +186,7 @@ def main(host='localhost', port=55555, goal="I0"):
     max_rob_speed = 2. #adjust as needed
     k_trans = [0.01, 0.01, 0.0]
     k_angle = [0.05, 0.3, 0.01]
-    A_star_is_born = True
+    A_star_is_born = False 
 
     obstacles = {} 
     good_nodes = {}
@@ -211,18 +211,22 @@ def main(host='localhost', port=55555, goal="I0"):
                 location[1] = height - location[1]
                 obstacles[key] = location
 
+    robot_location = do('where robot')['center']
+    robot_location[1] = height - robot_location[1]
+    print("robot_location ", robot_location)
+    print("marker Length ", marker_side_length)
+    
     if A_star_is_born:
-        robot_location = do('where robot')['center']
-        robot_location[1] = height - robot_location[1]
-        print("robot_location ", robot_location)
-        print("marker Length ", marker_side_length)
         graph = make_A_star_graph(width, height, 1.5*marker_side_length, obstacles, goal_location, robot_location)
         path = graph.search()
+    else:
+        graph = make_rrt_graph(width, height, 1.5*marker_side_length, obstacles, goal_location, robot_location)
+        path = graph.search()
 
-        print("path: ")
-        for i in range(len(path)):
-            print(path[i])
-        input("just before the go")
+    print("path: ")
+    for i in range(len(path)):
+        print(path[i])
+    input("just before the go")
 
     # Running loop
     try:
