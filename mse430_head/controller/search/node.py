@@ -81,13 +81,13 @@ class rrt_Node:
     def get_path(self):
         if self.goal is True:
             print("Reached the goal!")
-            return [self]
+            return [self.location]
         else:
             for child in self.children:
                 path = child.get_path()
                 if path is not None:
                     print("Path not none: ", path, " Here's self: ", self)
-                    path.append(self)
+                    path.append(self.location)
                     print("New path: ", path)
                     return path
             return None
