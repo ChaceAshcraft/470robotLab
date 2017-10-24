@@ -102,10 +102,10 @@ def main(host='localhost', port=55555, goal="I0"):
         return i
 
     def our_round(x):
-        if x >= 1:
+        if abs(x) >= 1:
             return round(x)
-        if x >=.2:
-            return 1
+        if abs(x) >=.2:
+            return 1*np.sign(x)
         return 0
 
     def make_A_star_graph(width, height, tile_length, obstacles, goal_location, root_location):
@@ -312,6 +312,13 @@ def main(host='localhost', port=55555, goal="I0"):
                     #    left_wheel =  int(our_round(drive - new_turn))
                     #    right_wheel = int(our_round(drive + new_turn))
                     #else:
+
+                    if not A_star_is_born:
+                        if abs(cur_angle_err) > 0.2:
+                            drive = 0 
+                            if abs(turn) < 1:
+                                turn = 1*np.sign(turn)/turn_coefficient
+
                     left_wheel = int(our_round(drive - turn_coefficient*turn))
                     right_wheel = int(our_round(drive + turn_coefficient*turn))
 
