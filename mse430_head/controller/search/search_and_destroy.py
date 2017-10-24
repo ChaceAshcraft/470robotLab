@@ -220,7 +220,7 @@ def main(host='localhost', port=55555, goal="I0"):
         graph = make_A_star_graph(width, height, 1.5*marker_side_length, obstacles, goal_location, robot_location)
         path = graph.search()
     else:
-        graph = make_rrt_graph(width, height, 1.5*marker_side_length, obstacles, goal_location, robot_location)
+        graph = make_rrt_graph(width, height, 1.75*marker_side_length, obstacles, goal_location, robot_location)
         path = graph.search()
 
     print("path: ")
@@ -262,6 +262,9 @@ def main(host='localhost', port=55555, goal="I0"):
                     cur_path_idx += 1
                     do('speed 0 0')
                     sleep(0.33)
+                    print("path: ")
+                    for i in range(len(path)):
+                        print(path[i])
                     #input("double check")
 
                 if distance(cur_rob_loc, goal_location) < 1.5*marker_side_length:

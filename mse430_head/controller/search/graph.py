@@ -88,7 +88,7 @@ class Robot_RRT_Graph:
         self.height = height
         self.k_val = 100000
         self.nodes = [root]
-        self.baseline_growth = np.sqrt(width**2 + height**2) / 4.0
+        self.baseline_growth = np.sqrt(width**2 + height**2) / 6.0
 
     def search(self):
         goal_found = False
